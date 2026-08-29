@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>정보통신설비 성능점검</title>
+<style>
+:root{
+  --ink:#101828; --ink2:#475467; --ink3:#98a2b3;
+  --line:#e4e7ec; --line2:#eef1f4; --bg:#f6f7f9; --card:#ffffff;
+  --navy:#1f3f66; --navy-d:#152c48; --navy-l:#eaf0f7;
+  --good:#0f9d58; --good-bg:#e7f5ee; --good-line:#9bd6b4;
+  --bad:#d64545; --bad-bg:#fbeaea; --bad-line:#eaa3a3;
+  --amber:#b7791f; --amber-bg:#fff7e6;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --shadow2:0 8px 24px rgba(16,24,40,.12);
+  --r:14px; --r-sm:10px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.5;
+  -webkit-font-smoothing:antialiased; padding-bottom:env(safe-area-inset-bottom);
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font-family:inherit;font-size:16px}
+.hide{display:none!important}
+
+/* ===== top bar ===== */
+.appbar{
+  position:sticky;top:0;z-index:40;background:var(--navy);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
+  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+}
+.appbar .back{width:34px;height:34px;border-radius:9px;display:none;
+  align-items:center;justify-content:center;background:rgba(255,255,255,.14);font-size:20px;flex:0 0 auto}
+.appbar h1{font-size:16px;font-weight:700;margin:0;letter-spacing:-.2px;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.appbar .sub{font-size:11px;opacity:.7;font-weight:500}
+.appbar .tools{display:flex;gap:6px;flex:0 0 auto}
+.appbar .tools button{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:center}
+.appbar .tools button:active{background:rgba(255,255,255,.28)}
+.appbar svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+.wrap{max-width:840px;margin:0 auto;padding:16px}
+
+/* ===== dashboard ===== */
+.site-card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.site-card h2{margin:0 0 12px;font-size:13px;color:var(--ink2);font-weight:700;letter-spacing:.02em;
+  display:flex;align-items:center;gap:7px}
+.site-card h2 .dot{width:6px;height:6px;border-radius:50%;background:var(--navy)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field label{display:block;font-size:11px;color:var(--ink3);margin:0 0 4px;font-weight:600}
+.field input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#fcfcfd;color:var(--ink);transition:border-color .15s}
+.field input:focus{outline:none;border-color:var(--navy);background:#fff}
+.field.full{grid-column:1/-1}
+
+.summary{background:linear-gradient(135deg,var(--navy),var(--navy-d));color:#fff;border-radius:var(--r);
+  padding:18px;margin-bottom:14px;box-shadow:var(--shadow2);position:relative;overflow:hidden}
+.summary::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;
+  background:radial-gradient(circle,rgba(255,255,255,.08),transparent 70%)}
+.summary .prog-top{display:flex;align-items:center;gap:16px}
+.ring{width:72px;height:72px;flex:0 0 auto;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:800;letter-spacing:-.5px}
+.summary .stitle{font-size:12px;opacity:.75;font-weight:600;margin-bottom:2px}
+.summary .sbig{font-size:20px;font-weight:800;letter-spacing:-.4px}
+.chips{display:flex;gap:8px;margin-top:14px;position:relative}
+.chip{flex:1;background:rgba(255,255,255,.12);border-radius:11px;padding:9px 6px;text-align:center}
+.chip b{display:block;font-size:19px;font-weight:800;line-height:1.1}
+.chip span{font-size:10.5px;opacity:.8;font-weight:600}
+.chip.good b{color:#7ee0a8}.chip.bad b{color:#ff9d9d}.chip.non b{color:#d8dee6}
+
+.list-head{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px}
+.list-head h2{font-size:13px;color:var(--ink2);font-weight:700;margin:0}
+.list-head .lgnd{display:flex;gap:12px;font-size:11px;color:var(--ink3)}
+.list-head .lgnd i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:middle}
+
+.eq{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:8px;
+  display:flex;align-items:center;gap:12px;padding:13px 14px;border-left:3px solid var(--line);
+  transition:transform .08s}
+.eq:active{transform:scale(.994)}
+.eq .no{font-size:11px;font-weight:800;color:var(--ink3);width:22px;flex:0 0 auto}
+.eq .body{flex:1;min-width:0}
+.eq .nm{font-size:14.5px;font-weight:700;letter-spacing:-.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eq .meta{font-size:11.5px;color:var(--ink3);margin-top:3px;display:flex;align-items:center;gap:8px}
+.bar{height:5px;background:var(--line2);border-radius:99px;overflow:hidden;margin-top:7px}
+.bar>i{display:block;height:100%;background:var(--navy);border-radius:99px;transition:width .3s}
+.eq.done{border-left-color:var(--good)}
+.eq.done .bar>i{background:var(--good)}
+.eq.hasbad{border-left-color:var(--bad)}
+.eq .badge{font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;flex:0 0 auto}
+.eq .badge.b{background:var(--bad-bg);color:var(--bad)}
+.eq .badge.d{background:var(--good-bg);color:var(--good)}
+.eq .chev{color:var(--ink3);flex:0 0 auto}
+.eq .chev svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* ===== inspection view ===== */
+.eq-meta{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.eq-meta .fgrid{grid-template-columns:1fr 1fr}
+.progress-inline{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.progress-inline .bar{flex:1;height:7px;margin:0}
+.progress-inline .t{font-size:12px;font-weight:700;color:var(--ink2);flex:0 0 auto}
+
+.item{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:10px;
+  overflow:hidden;border-left:3px solid var(--line)}
+.item.good{border-left-color:var(--good)}
+.item.bad{border-left-color:var(--bad)}
+.item .top{padding:13px 14px 12px}
+.item .qno{font-size:10.5px;font-weight:800;color:var(--ink3);letter-spacing:.04em}
+.item .q{font-size:14.5px;font-weight:700;letter-spacing:-.2px;margin:3px 0 0}
+.item .how{margin-top:9px;font-size:12.5px;color:var(--ink2);line-height:1.55;
+  background:var(--navy-l);border-radius:var(--r-sm);padding:9px 11px}
+.item .how b{color:var(--navy);font-weight:700;font-size:11px;display:block;margin-bottom:2px;letter-spacing:.02em}
+.toggle{display:flex;gap:8px;padding:0 14px 12px}
+.tg{flex:1;padding:11px;border-radius:var(--r-sm);border:1.5px solid var(--line);
+  font-size:14px;font-weight:700;color:var(--ink2);background:#fcfcfd;display:flex;align-items:center;
+  justify-content:center;gap:6px;transition:all .12s}
+.tg:active{transform:scale(.97)}
+.tg.on-good{background:var(--good-bg);border-color:var(--good-line);color:var(--good)}
+.tg.on-bad{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
+.tg svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4}
+.note-in{margin:0 14px 13px}
+.note-in input{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:var(--r-sm);background:#fcfcfd;font-size:14px}
+.note-in input:focus{outline:none;border-color:var(--navy);background:#fff}
+.note-in input::placeholder{color:var(--ink3)}
+
+.action-box{background:var(--amber-bg);border:1px solid #f2e2bf;border-radius:var(--r);padding:14px;margin:14px 0 4px}
+.action-box label{font-size:12px;font-weight:700;color:var(--amber);display:block;margin-bottom:8px}
+.action-box textarea{width:100%;min-height:80px;padding:10px 12px;border:1px solid #eaddc0;border-radius:var(--r-sm);
+  background:#fffdf8;resize:vertical;font-size:14px;line-height:1.55}
+.action-box textarea:focus{outline:none;border-color:var(--amber)}
+
+/* ===== report ===== */
+.rep-summary{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+.rep-summary .head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;
+  padding-bottom:14px;border-bottom:1px solid var(--line)}
+.rep-summary .head h2{margin:0;font-size:17px;font-weight:800}
+.rep-summary .head .date{font-size:12px;color:var(--ink3);text-align:right}
+.rep-kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px}
+.rep-kv dt{color:var(--ink3);font-weight:600}
+.rep-kv dd{margin:0;font-weight:600}
+.rep-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.rep-stats .s{border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 6px;text-align:center}
+.rep-stats .s b{display:block;font-size:22px;font-weight:800}
+.rep-stats .s span{font-size:11px;color:var(--ink3);font-weight:600}
+.rep-stats .s.good b{color:var(--good)}.rep-stats .s.bad b{color:var(--bad)}.rep-stats .s.non b{color:var(--ink3)}
+
+.rep-sec-h{font-size:13px;font-weight:800;color:var(--ink2);margin:18px 2px 10px;display:flex;align-items:center;gap:8px}
+.rep-sec-h .cnt{font-size:11px;font-weight:800;color:#fff;background:var(--bad);border-radius:99px;padding:1px 8px}
+.bad-card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:13px 14px;margin-bottom:8px;border-left:3px solid var(--bad)}
+.bad-card .eqn{font-size:11px;font-weight:700;color:var(--bad)}
+.bad-card .it{font-size:14px;font-weight:700;margin:2px 0 4px}
+.bad-card .nt{font-size:12.5px;color:var(--ink2)}
+.bad-card .nt em{color:var(--ink3);font-style:normal}
+.empty{text-align:center;padding:34px 16px;color:var(--ink3);background:var(--card);border-radius:var(--r);box-shadow:var(--shadow)}
+.empty .ic{font-size:30px;margin-bottom:8px}
+
+/* ===== bottom nav ===== */
+.tabbar{position:sticky;bottom:0;z-index:30;background:rgba(255,255,255,.94);
+  backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;
+  padding:6px 8px calc(env(safe-area-inset-bottom) + 6px)}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;
+  color:var(--ink3);font-size:10.5px;font-weight:700;border-radius:10px}
+.tabbar button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button.on{color:var(--navy)}
+.tabbar button .nbadge{position:absolute;transform:translate(14px,-4px);background:var(--bad);color:#fff;
+  font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+.btn-row{display:flex;gap:8px;margin-top:14px}
+.btn{flex:1;padding:12px;border-radius:var(--r-sm);font-weight:700;font-size:14px;display:flex;
+  align-items:center;justify-content:center;gap:7px;transition:all .12s}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:var(--navy);color:#fff}
+.btn.ghost{background:var(--card);color:var(--ink2);border:1px solid var(--line)}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(16,24,40,.4);z-index:50;display:flex;align-items:flex-end;
+  justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.sheet-bg.on{opacity:1;pointer-events:auto}
+.sheet{background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:8px 16px calc(env(safe-area-inset-bottom) + 18px);
+  transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.sheet-bg.on .sheet{transform:translateY(0)}
+.sheet .grip{width:38px;height:4px;background:var(--line);border-radius:99px;margin:8px auto 14px}
+.sheet h3{margin:0 0 4px;font-size:16px;font-weight:800}
+.sheet p{margin:0 0 14px;font-size:13px;color:var(--ink2)}
+.sheet .opt{display:flex;align-items:center;gap:12px;padding:13px 6px;border-top:1px solid var(--line2);font-size:14.5px;font-weight:600}
+.sheet .opt svg{width:20px;height:20px;stroke:var(--navy);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.sheet .opt.danger{color:var(--bad)} .sheet .opt.danger svg{stroke:var(--bad)}
+
+.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(20px);background:var(--ink);
+  color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:99px;z-index:60;opacity:0;
+  pointer-events:none;transition:all .25s;box-shadow:var(--shadow2)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ===== print ===== */
+@media print{
+  body{background:#fff}
+  .appbar,.tabbar,.tabbar *,.btn-row,.no-print{display:none!important}
+  .wrap{max-width:none;padding:0}
+  #v-report{display:block!important}
+  .rep-summary,.bad-card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  .item,.eq{break-inside:avoid}
+}
+@media (min-width:560px){.eq-meta .fgrid{grid-template-columns:1fr 1fr 1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <button class="back" id="backBtn" aria-label="뒤로"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div style="flex:1;min-width:0">
+    <h1 id="barTitle">정보통신설비 성능점검</h1>
+    <div class="sub" id="barSub">현장 점검 · 자동 저장</div>
+  </div>
+  <div class="tools">
+    <button id="printBtn" aria-label="인쇄"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg></button>
+    <button id="menuBtn" aria-label="메뉴"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></button>
+  </div>
+</div>
+
+<div class="wrap">
+  <!-- DASHBOARD -->
+  <div id="v-dash">
+    <div class="site-card">
+      <h2><span class="dot"></span>현장 정보</h2>
+      <div class="fgrid">
+        <div class="field"><label>상호(명칭)</label><input id="f_site" placeholder="○○빌딩"></div>
+        <div class="field"><label>점검자</label><input id="f_inspector" placeholder="홍길동"></div>
+        <div class="field full"><label>현장주소</label><input id="f_addr" placeholder="서울시 ..."></div>
+        <div class="field"><label>관리주체(입회자)</label><input id="f_attendee" placeholder="관리사무소"></div>
+        <div class="field"><label>점검일자</label><input id="f_date" type="date"></div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="prog-top">
+        <div class="ring">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="30" stroke="rgba(255,255,255,.18)" stroke-width="8" fill="none"/>
+            <circle id="ringFg" cx="36" cy="36" r="30" stroke="#7ee0a8" stroke-width="8" fill="none"
+              stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+          </svg>
+          <div class="pct" id="ringPct">0%</div>
+        </div>
+        <div>
+          <div class="stitle">전체 점검 진행률</div>
+          <div class="sbig" id="progText">0 / 323 항목</div>
+        </div>
+      </div>
+      <div class="chips">
+        <div class="chip good"><b id="cGood">0</b><span>양호</span></div>
+        <div class="chip bad"><b id="cBad">0</b><span>불량</span></div>
+        <div class="chip non"><b id="cNon">323</b><span>미점검</span></div>
+      </div>
+    </div>
+
+    <div class="list-head">
+      <h2>설비 목록 · 34개</h2>
+      <div class="lgnd"><span><i style="background:var(--good)"></i>완료</span><span><i style="background:var(--bad)"></i>불량</span></div>
+    </div>
+    <div id="eqList"></div>
+  </div>
+
+  <!-- INSPECTION -->
+  <div id="v-eq" class="hide">
+    <div class="eq-meta">
+      <div class="progress-inline">
+        <span class="t" id="eqProgT">0 / 0</span>
+        <div class="bar"><i id="eqProgBar" style="width:0%"></i></div>
+      </div>
+      <div class="fgrid">
+        <div class="field"><label>점검자</label><input id="e_inspector" placeholder="소속·성명"></div>
+        <div class="field"><label>입회자</label><input id="e_attendee" placeholder="관리주체"></div>
+        <div class="field"><label>설치위치</label><input id="e_loc" placeholder="예: 지하 1층 통신실"></div>
+        <div class="field"><label>점검일자</label><input id="e_date" type="date"></div>
+      </div>
+    </div>
+    <div id="itemList"></div>
+    <div class="action-box">
+      <label>부적합 사항 및 조치사항</label>
+      <textarea id="e_action" placeholder="부적합 항목의 구체적 내용과 조치사항을 기록하세요."></textarea>
+    </div>
+    <div class="btn-row no-print">
+      <button class="btn ghost" id="allGood"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>모두 양호</button>
+      <button class="btn pri" id="doneEq"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>목록으로</button>
+    </div>
+  </div>
+
+  <!-- REPORT -->
+  <div id="v-report" class="hide">
+    <div class="rep-summary">
+      <div class="head">
+        <div>
+          <h2 id="r_site">성능점검 결과 보고</h2>
+          <div style="font-size:12px;color:var(--ink3);margin-top:3px" id="r_addr"></div>
+        </div>
+        <div class="date" id="r_date"></div>
+      </div>
+      <dl class="rep-kv">
+        <dt>점검자</dt><dd id="r_inspector">-</dd>
+        <dt>입회자</dt><dd id="r_attendee">-</dd>
+      </dl>
+      <div class="rep-stats">
+        <div class="s"><b id="r_total">0</b><span>전체</span></div>
+        <div class="s good"><b id="r_good">0</b><span>양호</span></div>
+        <div class="s bad"><b id="r_bad">0</b><span>불량</span></div>
+        <div class="s non"><b id="r_non">0</b><span>미점검</span></div>
+      </div>
+    </div>
+    <div id="repBody"></div>
+  </div>
+</div>
+
+<div class="tabbar">
+  <button data-tab="dash" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>대시보드</button>
+  <button data-tab="report" style="position:relative"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>보고서<span class="nbadge hide" id="tabBadge">0</span></button>
+</div>
+
+<!-- menu sheet -->
+<div class="sheet-bg" id="menuSheet">
+  <div class="sheet">
+    <div class="grip"></div>
+    <h3>데이터 관리</h3>
+    <p>점검 내용은 이 기기에 자동 저장됩니다.</p>
+    <button class="opt" id="mPrint"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>보고서 인쇄 / PDF 저장</button>
+    <button class="opt" id="mCsv"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>결과 내보내기 (CSV)</button>
+    <button class="opt" id="mJson"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>백업 파일 저장 (JSON)</button>
+    <button class="opt" id="mImport"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13l4-4 4 4M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg>백업 불러오기 (JSON)</button>
+    <button class="opt danger" id="mReset"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>전체 초기화</button>
+  </div>
+</div>
+<input type="file" id="importFile" accept=".json,application/json" class="hide">
+<div class="toast" id="toast"></div>
+
+<script>
+const DATA = [{"name": "케이블 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "통과 지점 광케이블 스파이럴 슬리브 보호 여부 확인", "m": "관통부·통과 지점 광케이블에 스파이럴 슬리브 등 보호재 적용 여부를 육안 확인한다. 마찰·꺾임에 의한 손상 우려 구간의 보호 상태를 점검한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "배관 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "케이블 수용 여유 공간 확인", "m": "배관·트레이 내 케이블 점유율과 추가 포설 가능 여유공간을 확인한다. 과밀로 인한 방열·증설 지장이 없는지 점검한다."}, {"t": "배관 및 트레이 상태(수평, 수직 등) 확인", "m": "배관·케이블 트레이의 수평·수직 시공 상태와 고정·처짐 여부를 육안 확인한다. 부식·이탈·변형이 없는지 점검한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "국선인입 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "맨홀 내 시설물 고정 상태 확인", "m": "맨홀 내부 케이블·행거 등 시설물의 고정 상태를 확인한다. 침수·이완·손상 흔적 유무를 육안 점검한다."}, {"t": "맨홀 뚜껑의 결합 상태 및 파손유무 확인", "m": "맨홀 뚜껑의 결합(잠금) 상태와 균열·파손 여부를 육안 확인한다. 들뜸·변형으로 인한 안전·침수 위험이 없는지 점검한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "단자함 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "외관 상태 점검(오염, 부식, 손상, 파손 등) 및 확인", "m": "함체·기기 외관의 오염·부식·손상·파손 여부를 육안 확인한다. 방수·방청 상태와 명판·표시 손상 여부를 함께 점검한다."}, {"t": "잠금 장치 상태 확인", "m": "함체·도어 시건장치의 작동 상태를 확인한다. 시건 후 임의 개방되지 않는지, 파손·헐거움이 없는지 점검한다."}, {"t": "단자함 내 기구 및 기기 고정 상태 확인", "m": "단자함 내부 단자·기구·기기의 고정 상태를 확인한다. 이완·탈락·진동에 의한 접속불량 우려가 없는지 육안 점검한다."}, {"t": "케이블 연결 및 정리 상태 확인", "m": "단자·기기 간 케이블 결선과 정리(태깅·번들) 상태를 확인한다. 오결선·이완·라벨 누락 여부를 점검한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "이동통신 구내선로 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "접속함 내 기구 및 기기 고정 상태 확인", "m": "이동통신 접속함 내 기구·기기의 고정 상태를 육안 확인한다. 이완·탈락·접속불량 우려 여부를 점검한다."}, {"t": "잠금 장치 상태 확인", "m": "함체·도어 시건장치의 작동 상태를 확인한다. 시건 후 임의 개방되지 않는지, 파손·헐거움이 없는지 점검한다."}, {"t": "배관 예비공 가용 여부 확인", "m": "배관의 예비공(여유관) 확보 및 사용 가능 여부를 확인한다. 향후 증설용 예비공의 폐색·이물 여부를 점검한다."}, {"t": "전원 단자 및 연결 상태 확인", "m": "전원 단자의 결선·체결 상태와 과열·변색 흔적을 확인한다. 단자 이완으로 인한 접촉불량 여부를 점검한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "전화 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "통화 연결 및 품질 확인", "m": "임의 회선으로 통화 시험을 실시하여 연결 성공 및 통화 품질을 확인한다. 잡음·끊김·지연 없이 양방향 통화가 되는지 점검한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}]}, {"name": "방송 공동수신 안테나 시설", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "출력 검사 단자의 레벨값 확인", "m": "출력 검사 단자에 신호레벨계를 연결하여 신호 레벨값을 측정한다. 기준 레벨 범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "지하 DMB, FM 수신 상태 확인", "m": "지하 등 음영구역에서 DMB·FM 수신 상태를 단말로 확인한다. 채널 수신 가능 여부와 화면·음성 품질을 점검한다."}, {"t": "증폭기·분배기 간의 공간 확보 및 신호 간섭 확인", "m": "증폭기·분배기 설치 간격(이격)과 방열 공간 확보 상태를 확인한다. 상호 신호 간섭·발열 영향이 없는지 점검한다."}, {"t": "누설동축케이블 전계강도 측정(무선방식인 경우)", "m": "전계강도 측정기로 누설동축케이블(LCX) 주변 전계강도를 측정한다. 서비스 구간에서 기준 전계강도 확보 여부를 확인하고 기록한다."}, {"t": "전파환경(RSRP) 측정", "m": "측정 단말·스캐너로 대상 구간의 RSRP(기준신호 수신전력)를 측정한다. 통화·데이터 품질 확보 기준 충족 여부를 확인하고 값을 기록한다."}, {"t": "유휴 분배 및 분기 단자 종단저항 측정(75Ω) 확인", "m": "사용하지 않는 분배·분기 단자의 75Ω 종단저항 장착 여부를 확인한다. 반사·신호왜곡 방지를 위한 종단처리 상태를 점검한다."}, {"t": "기기 입·출력 신호 레벨 측정", "m": "신호레벨계로 기기의 입력·출력 신호 레벨을 각각 측정한다. 규정 레벨 범위 충족 여부를 확인하고 입·출력 값을 기록한다."}, {"t": "광 송·수신 레벨 측정", "m": "광파워미터로 광 송신·수신 레벨(dBm)을 측정한다. 정상 동작 범위(수광 감도 이상) 내 여부를 확인하고 값을 기록한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}, {"t": "무선 신호 수신기기 수신감도 측정(무선 방식인 경우)", "m": "수신기 입력단에서 수신감도(레벨)를 측정한다. 정상 동작에 필요한 최소 수신감도 확보 여부를 확인한다."}, {"t": "무선 신호 전계강도 측정(무선 방식인 경우)", "m": "전계강도 측정기로 서비스 구간의 무선 신호 전계강도를 측정한다. 기준 전계강도 충족 여부를 확인하고 값을 기록한다."}]}, {"name": "종합유선방송 구내 전송선로 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "출력 검사 단자의 레벨값 확인", "m": "출력 검사 단자에 신호레벨계를 연결하여 신호 레벨값을 측정한다. 기준 레벨 범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "기기 입·출력 신호 레벨 측정", "m": "신호레벨계로 기기의 입력·출력 신호 레벨을 각각 측정한다. 규정 레벨 범위 충족 여부를 확인하고 입·출력 값을 기록한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "방송음향 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "방송 송출 및 출력 시 노이즈 발생, 방송 품질 확인", "m": "방송을 시험 송출하여 출력 음의 노이즈·왜곡 발생 여부를 청취 확인한다. 전 구역 스피커의 방송 품질을 점검한다."}, {"t": "출력 음향의 음량의 적정성 확인", "m": "각 구역 스피커 출력 음량을 청취 또는 소음계로 확인한다. 구역별 음량이 과대·과소하지 않고 명료한지 점검한다."}, {"t": "비상방송설비 연동 상태 유무 및 작동 여부 확인", "m": "화재수신기 등과 비상방송 연동(우선 절체)을 시험한다. 비상신호 입력 시 자동 절체·비상방송 송출 동작을 확인한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "네트워크 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "VLAN, VPN 등 보안 기능 사용 시 설정 확인", "m": "네트워크 장비의 VLAN 분리·VPN 터널 등 보안 기능 설정 상태를 확인한다. 설계 의도대로 격리·암호화가 적용되어 있는지 점검한다."}, {"t": "광 송·수신 레벨 확인", "m": "광파워미터로 광 송·수신 레벨을 확인한다. 링크 손실이 허용범위 내인지, 수광 감도 이상 레벨이 확보되는지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "전자출입(통제) 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "VLAN, VPN 등 보안 기능 사용 시 설정 확인", "m": "네트워크 장비의 VLAN 분리·VPN 터널 등 보안 기능 설정 상태를 확인한다. 설계 의도대로 격리·암호화가 적용되어 있는지 점검한다."}, {"t": "일정 시간 이후 자동 닫힘 및 잠금 기능 확인", "m": "출입문 개방 후 설정 시간 경과 시 자동 닫힘·잠금 동작을 시험한다. 설정 시간 정확도와 잠금 완료 여부를 확인한다."}, {"t": "수동 조작 스위치 정상 동작 여부 확인", "m": "수동 개폐·해제 스위치를 조작하여 정상 동작을 확인한다. 비상 시 수동 조작 가능 여부와 복귀 상태를 점검한다."}, {"t": "RF카드 자기장 세기 측정", "m": "RF리더기 부근에서 자기장 측정기로 카드 인식용 자기장 세기를 측정한다. 정상 인식에 필요한 세기 확보 여부를 확인한다."}, {"t": "RF카드 인식거리 측정", "m": "RF카드를 리더기에 접근시키며 정상 인식되는 최대 거리를 측정한다. 규정 인식거리 범위 내 안정 인식 여부를 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "원격검침 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "누설동축케이블 전계강도 측정", "m": "전계강도 측정기로 누설동축케이블(LCX) 구간 전계강도를 측정한다. 서비스 구간 기준 전계강도 확보 여부를 확인하고 측정값을 기록한다."}, {"t": "송신 출력 측정", "m": "출력 측정기(파워미터)로 송신기 출력을 측정한다. 정격 송신 출력 범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "스퓨리어스 측정", "m": "스펙트럼 분석기로 불요(스퓨리어스) 발사 레벨을 측정한다. 허용 기준 이하인지 확인하고 측정값을 기록한다."}, {"t": "무선 신호 수신기기 수신감도 측정", "m": "수신기 입력단에서 수신감도를 측정한다. 정상 수신에 필요한 감도 확보 여부를 확인하고 값을 기록한다."}, {"t": "무선 신호 전계강도 측정", "m": "전계강도 측정기로 서비스 구간 전계강도를 측정한다. 기준값 충족 여부를 확인하고 측정값을 기록한다."}, {"t": "안테나 송·수신 신호 상태 확인(무선 방식의 경우)", "m": "안테나 계통의 송·수신 신호 상태(레벨·정합 등)를 확인한다. 단선·정합불량으로 인한 신호 저하가 없는지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "주차관제 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "주간 및 야간 차량번호 인식 여부 확인", "m": "주간·야간 조건에서 차량을 진입시켜 번호판 인식 정확도를 확인한다. 조도 변화에 따른 오인식·미인식 여부를 점검한다."}, {"t": "차량 출입의 실시간 감지 및 신호 송·수신 확인", "m": "차량 진·출입 시 루프/센서 감지와 차단기·서버 간 신호 송수신을 확인한다. 감지 누락·지연 여부를 점검한다."}, {"t": "층별, 구역별 주차 현황에 따른 만공차 내용 표출 정확도 확인", "m": "실제 주차 대수와 안내표시기의 만·공차 표출을 대조한다. 층·구역별 잔여대수 표출 정확도를 점검한다."}, {"t": "중앙감시반 또는 관제 서버와의 데이터 연동 여부 확인", "m": "현장 설비와 중앙감시반/관제서버 간 데이터 연동을 확인한다. 상태·이벤트가 실시간 반영되는지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "주차유도 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "차량 위치 정보의 저장 및 기록 상태 확인", "m": "차량 위치 인식·저장 데이터의 기록 상태를 확인한다. 위치정보 누락·오기록 없이 저장되는지 점검한다."}, {"t": "주차 공간 유무에 따른 발광소자(LED 등) 동작 확인", "m": "주차면 점유에 따라 만·공차 표시 LED 색상이 정상 전환되는지 확인한다. 점등 불량·오표시 여부를 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "무인택배 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "시스템 사용자 권한 확인", "m": "사용자별 접근 권한(관리자/일반 등) 설정을 확인한다. 권한 분리 및 불필요 권한 부여 여부를 점검한다."}, {"t": "중앙 시스템과의 실시간 통신 연결 상태 확인", "m": "현장 단말과 중앙 서버 간 실시간 통신(연결·응답) 상태를 확인한다. 통신 두절·지연 없이 데이터가 정상 송수신되는지 점검한다."}, {"t": "물리적 또는 논리적 버튼 동작 시 디스플레이 정보와의 상호 연계성 확인", "m": "버튼(키패드·터치) 조작에 따라 디스플레이 정보가 일치 변경되는지 확인한다. 입력과 화면 표출의 연계 정상 여부를 점검한다."}, {"t": "물리적 또는 논리적 버튼 정상 동작 여부 확인(키패드 등)", "m": "키패드·터치 등 버튼을 순차 조작하여 입력 정상 인식 여부를 확인한다. 무반응·중복입력·오동작이 없는지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "비상벨 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "작동 시 관제소(경비실, 관리사무소 등)와의 통화 연결 및 품질 상태 확인", "m": "비상벨을 작동시켜 관제소와의 통화 연결·음성 품질을 확인한다. 호출 신호 수신과 양방향 통화 가능 여부를 점검한다."}, {"t": "무선 신호 수신 감도 측정", "m": "수신부에서 무선 신호 수신감도(레벨)를 측정한다. 정상 동작에 필요한 감도 확보 여부를 확인한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "영상정보처리기기 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "비상벨 작동 시 연계된 기능(알람 구역 안내, CCTV 영상 등) 정상 동작 여부 확인", "m": "비상벨 작동 시 알람 구역 안내·연동 CCTV 팝업 등 연계 동작을 확인한다. 연동 신호 전달과 표출 정상 여부를 점검한다."}, {"t": "실시간 동영상 촬영 및 저장 상태 확인", "m": "카메라 실시간 영상이 정상 출력되고 저장장치에 끊김 없이 녹화되는지 확인한다. 영상 품질·프레임·저장 일시기록의 정상 여부를 점검한다."}, {"t": "녹화 영상 재생 및 품질 확인", "m": "저장된 녹화 영상을 임의 구간 재생하여 화질·재생 정상 여부를 확인한다. 끊김·손상·일시정보 오류가 없는지 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "기능(적외선 모드, 컬러 모드, 모션인식 등) 동작 상태 확인", "m": "적외선(야간)·컬러 전환, 모션 감지 등 카메라 기능 동작을 확인한다. 조도·움직임에 따라 정상 전환·검출되는지 점검한다."}, {"t": "마이크, 스피커 등 작동 상태 확인(해당 시)", "m": "양방향 음성장치(마이크·스피커)의 송·수신 동작을 확인한다. 음성 입출력 품질과 노이즈 발생 여부를 점검한다."}, {"t": "기능(분할 화면, 무선기기 연결 등) 동작 상태 확인", "m": "분할 화면 표시, 무선기기(모바일 등) 연결 기능 동작을 확인한다. 설정대로 정상 표출·연결되는지 점검한다."}, {"t": "냉각팬 동작상태 확인", "m": "기기 냉각팬의 회전·소음·발열 상태를 확인한다. 팬 정지·이상소음으로 인한 과열 우려가 없는지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "홈네트워크 설비", "items": [{"t": "[공용] 유지보수·관리 및 성능점검 대상 현황표 확인", "m": "공용부(단지서버·워크그룹/백본스위치·로비폰·경비실기 등) 현황표를 실제 설치 설비와 대조 확인한다. 기재 누락·불일치 여부를 점검한다."}, {"t": "VLAN, VPN 등 보안 기능 사용 시 설정 확인", "m": "네트워크 장비의 VLAN 분리·VPN 터널 등 보안 기능 설정 상태를 확인한다. 설계 의도대로 격리·암호화가 적용되어 있는지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}, {"t": "연결 시스템 데이터 연동 정확도 확인", "m": "연계 시스템(주차·출입 등) 간 데이터 연동의 정확도를 확인한다. 동기화 지연·불일치 여부를 점검한다."}, {"t": "[전유] 유지보수·관리 및 성능점검 대상 현황표 확인", "m": "전유부(세대단말기·홈게이트웨이 등) 현황표를 실제 세대 설비와 대조 확인한다. 세대별 설치 현황의 일치 여부를 점검한다."}, {"t": "홈네트워크 단말기기 원격제어 정상 작동 여부 확인", "m": "월패드·앱 등을 통해 세대 단말기기 원격제어를 시험한다. 제어 명령의 정상 반영 및 응답 여부를 점검한다."}, {"t": "월패드 사용자 인증(비밀번호) 설정 여부 확인", "m": "월패드의 사용자 인증(비밀번호·생체 등) 설정 여부를 확인한다. 초기·취약 인증 사용 여부와 인증 실패 시 잠금 동작을 점검한다."}, {"t": "최신 펌웨어 적용 여부 확인", "m": "단말(월패드 등) 펌웨어 버전을 최신 버전과 대조한다. 보안 취약점 대응 최신 펌웨어 적용 여부를 확인한다."}]}, {"name": "빌딩 안내 시스템(BIS)", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "VLAN, VPN 등 보안 기능 사용 시 설정 확인", "m": "네트워크 장비의 VLAN 분리·VPN 터널 등 보안 기능 설정 상태를 확인한다. 설계 의도대로 격리·암호화가 적용되어 있는지 점검한다."}, {"t": "제어기기와의 데이터 연동 및 정확도 확인", "m": "안내 시스템과 제어기기 간 데이터 연동·정확도를 확인한다. 표출 정보와 실제 상태의 일치 여부를 점검한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "전기시계 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "VLAN, VPN 등 보안 기능 사용 시 설정 확인", "m": "네트워크 장비의 VLAN 분리·VPN 터널 등 보안 기능 설정 상태를 확인한다. 설계 의도대로 격리·암호화가 적용되어 있는지 점검한다."}, {"t": "모시계∼자시계 각 회선별 송출 및 도착전압 측정", "m": "모시계 송출 전압과 각 회선 자시계 도착 전압을 측정한다. 회선별 전압강하가 허용범위 내인지 확인하고 값을 기록한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "통합 SI 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "VLAN, VPN 등 보안 기능 사용 시 설정 확인", "m": "네트워크 장비의 VLAN 분리·VPN 터널 등 보안 기능 설정 상태를 확인한다. 설계 의도대로 격리·암호화가 적용되어 있는지 점검한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "시설관리 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "RF카드 자기장 세기 측정", "m": "RF리더기 부근에서 자기장 측정기로 카드 인식용 자기장 세기를 측정한다. 정상 인식에 필요한 세기 확보 여부를 확인한다."}, {"t": "RF카드 인식거리 측정", "m": "RF카드를 리더기에 접근시키며 정상 인식되는 최대 거리를 측정한다. 규정 인식거리 범위 내 안정 인식 여부를 점검한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "건물 에너지관리 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "예비전원(UPS 또는 발전기) 배선 및 연결 상태 확인", "m": "UPS 또는 비상발전기와 설비 간 전원 배선·단자 연결 상태를 육안 확인한다. 단선·이완·과열 흔적이 없는지, 정전 시 절체 가능 상태인지 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "지능형 인원계수 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "센서 감도 및 감지 범위 점검", "m": "감지 대상을 이동시켜 센서 감도·감지 범위를 확인한다. 미감지·오감지 구간이 없는지 점검한다."}, {"t": "실시간 인원 계수 및 누계 데이터 정상 동작 테스트", "m": "출입구를 통과시켜 실시간 인원 계수와 누계 집계 정확도를 확인한다. 카운트 누락·중복 여부를 점검한다."}, {"t": "실시간 동영상 촬영 및 저장 상태 확인", "m": "카메라 실시간 영상이 정상 출력되고 저장장치에 끊김 없이 녹화되는지 확인한다. 영상 품질·프레임·저장 일시기록의 정상 여부를 점검한다."}, {"t": "녹화 영상 재생 및 품질 확인", "m": "저장된 녹화 영상을 임의 구간 재생하여 화질·재생 정상 여부를 확인한다. 끊김·손상·일시정보 오류가 없는지 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "지능형 경계 감시 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "실시간 경보 및 알림 작동 확인", "m": "경계 침입 등 이벤트를 발생시켜 실시간 경보·알림 동작을 확인한다. 관제 통보·표시의 정상 여부를 점검한다."}, {"t": "데이터 연동 및 정확도 확인", "m": "감시 데이터와 연동 시스템 간 전송·표출 정확도를 확인한다. 이벤트 누락·지연 여부를 점검한다."}, {"t": "중앙 시스템과의 실시간 통신 연결 상태 확인", "m": "현장 단말과 중앙 서버 간 실시간 통신(연결·응답) 상태를 확인한다. 통신 두절·지연 없이 데이터가 정상 송수신되는지 점검한다."}, {"t": "렌즈 오염 및 파손 상태 확인", "m": "카메라 렌즈·돔커버의 오염·결로·파손 여부를 육안 확인한다. 영상 선명도에 영향을 주는 이물 여부를 점검한다."}, {"t": "실시간 동영상 촬영 및 저장 상태 확인", "m": "카메라 실시간 영상이 정상 출력되고 저장장치에 끊김 없이 녹화되는지 확인한다. 영상 품질·프레임·저장 일시기록의 정상 여부를 점검한다."}, {"t": "녹화 영상 재생 및 품질 확인", "m": "저장된 녹화 영상을 임의 구간 재생하여 화질·재생 정상 여부를 확인한다. 끊김·손상·일시정보 오류가 없는지 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}, {"t": "함체부 확인", "m": "옥외 함체의 시건·방수·접지 및 외관 상태를 확인한다. 침수·부식·파손 흔적이 없는지 점검한다."}]}, {"name": "스마트 병원 설비(의료용 너스콜)", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "호출기 버튼 정상 눌림 및 복원 여부 확인", "m": "너스콜 호출기 버튼을 눌러 호출 발신과 버튼 복원 동작을 확인한다. 눌림 불량·미복원 여부를 점검한다."}, {"t": "주수신기의 통화용자기 확장성 확인", "m": "주수신기의 통화·표시 채널 확장(증설) 수용 여부를 확인한다. 병실 증설 시 연동 가능 여부를 점검한다."}, {"t": "통화 연결 및 품질 상태 확인", "m": "호출 병실과 주수신기 간 통화 연결 및 음성 품질을 확인한다. 잡음·끊김 없이 양방향 통화가 되는지 점검한다."}, {"t": "주수신기와 호출 병실 간 데이터 연동 여부 확인", "m": "병실 호출 시 주수신기에 병실정보가 정확히 표시되는지 확인한다. 호출 위치·데이터의 연동 정상 여부를 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "스마트 도난방지 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "도난 감지 장치의 태그 인식 여부 확인", "m": "보안 태그를 게이트에 통과시켜 정상 인식 여부를 확인한다. 미인식·오인식 구간이 없는지 점검한다."}, {"t": "경보기 작동 여부 확인(태그 인식 시)", "m": "미해제 태그 통과 시 경보(음향·표시) 작동을 확인한다. 경보 발생·해제 동작의 정상 여부를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "스마트 공장 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "센서 및 제어기기와 데이터 연동 여부 확인", "m": "현장 센서·제어기기와 상위 시스템 간 데이터 연동을 확인한다. 수집값 표출·제어 반영의 정상 여부를 점검한다."}, {"t": "SCADA 관련 설비의 모니터링 및 제어 정상 동작 여부 확인", "m": "SCADA 화면에서 현장 설비 상태 모니터링과 원격 제어 동작을 확인한다. 표시값 일치·제어 응답의 정상 여부를 점검한다."}, {"t": "PLC관련 설비의 각종센서 제어 가능 여부 확인", "m": "PLC 입출력을 통해 각종 센서·구동부 제어 가능 여부를 확인한다. 입력 감지·출력 동작의 정상 여부를 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "스마트 도서관 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "글자(한글, 영문), 숫자 등 정보 가독성 확인", "m": "디스플레이에 표출되는 한글·영문·숫자의 가독성을 육안 확인한다. 깨짐·잔상·색번짐 없이 선명하게 표시되는지 점검한다."}, {"t": "터치 감도 및 응답 속도 확인", "m": "키오스크 터치 화면의 여러 지점을 조작해 감도·응답 속도를 확인한다. 오터치·지연·무반응 여부를 점검한다."}, {"t": "권한 사용자 액세스 가능 여부 확인", "m": "권한 보유 사용자 계정으로 접속하여 정상 액세스 여부를 확인한다. 권한 외 접근 차단 동작을 함께 점검한다."}, {"t": "이용 시간 제외 동작 중단 여부 확인", "m": "운영(이용) 시간 외 자동 동작 중단(절전·대기) 여부를 확인한다. 스케줄 설정대로 중단·재개되는지 점검한다."}, {"t": "UPS 바이패스 절체 동작시험(UPS 설치시)", "m": "UPS 바이패스 절체를 시험하여 무순단 절체 동작을 확인한다. 절체 시 부하 정전·재기동 발생 여부를 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "지능형 이상음원 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "이상 음원 감지 정상 동작 테스트", "m": "비명·충격음 등 시험 음원을 발생시켜 이상음원 감지 동작을 확인한다. 감지·경보 통보의 정상 여부를 점검한다."}, {"t": "관제소와의 통화 연결 및 품질 상태 확인", "m": "현장 장치와 관제소 간 통화 연결 및 음성 품질을 확인한다. 호출·응답·통화 품질의 정상 여부를 점검한다."}, {"t": "영상 촬영 방해 요인 확인", "m": "카메라 시야를 가리는 장애물·역광·오염 등 방해 요인을 확인한다. 유효 감시 화각 확보 여부를 점검한다."}, {"t": "실시간 동영상 촬영 및 저장 상태 확인", "m": "카메라 실시간 영상이 정상 출력되고 저장장치에 끊김 없이 녹화되는지 확인한다. 영상 품질·프레임·저장 일시기록의 정상 여부를 점검한다."}, {"t": "녹화 영상 재생 및 품질 확인", "m": "저장된 녹화 영상을 임의 구간 재생하여 화질·재생 정상 여부를 확인한다. 끊김·손상·일시정보 오류가 없는지 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "IoT기반 지하공간 안전관리 시스템", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "각종 센서 모니터링 및 제어 정상 동작 여부 확인", "m": "지하공간 가스·수위·온습도 등 센서 모니터링과 연동 제어 동작을 확인한다. 임계 초과 시 경보·제어 동작을 점검한다."}, {"t": "센서 송신 데이터의 실시간 수신 여부 확인", "m": "현장 센서의 송신 데이터가 서버에 실시간 수신되는지 확인한다. 통신 두절·데이터 누락 여부를 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "디지털 사이니지", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "디스플레이 고정 장치 상태 확인", "m": "사이니지 디스플레이 거치·고정 브래킷의 체결 상태를 확인한다. 이완·기울어짐·낙하 위험이 없는지 점검한다."}, {"t": "서버로부터 받은 실시간 정보의 정상 표출 여부 확인", "m": "콘텐츠 서버가 전송한 실시간 정보가 화면에 정상 표출되는지 확인한다. 갱신 지연·미표출 여부를 점검한다."}, {"t": "글자(한글, 영문), 숫자 등 정보 가독성 확인", "m": "디스플레이에 표출되는 한글·영문·숫자의 가독성을 육안 확인한다. 깨짐·잔상·색번짐 없이 선명하게 표시되는지 점검한다."}, {"t": "디스플레이 테스트를 통한 불량 화소 확인", "m": "단색 패턴 등 테스트 화면으로 불량(데드·스턱) 화소 유무를 확인한다. 화면 얼룩·휘도 불균일을 함께 점검한다."}, {"t": "하드디스크 저장 공간 확인 및 정리", "m": "저장장치(HDD/NVR 등)의 잔여 용량과 녹화 보존기간을 확인한다. 용량 부족 시 불필요 데이터 정리 또는 증설 필요 여부를 점검한다."}, {"t": "사용자 인증(비밀번호) 설정 여부 확인", "m": "관리자·운용 화면 접속 시 비밀번호 등 사용자 인증 절차 설정 여부를 확인한다. 초기·취약 비밀번호 사용 및 주기적 변경 적용 상태를 점검한다."}, {"t": "최신 보안 패치 설치 여부 확인", "m": "운영체제·응용 소프트웨어의 보안 패치 버전을 확인하고 최신 적용 여부를 점검한다. 미적용 항목은 패치명·버전을 기록한다."}, {"t": "최신 펌웨어 설치 여부 확인", "m": "기기 펌웨어 버전을 제조사 최신 버전과 대조한다. 최신 적용 여부를 확인하고 구버전인 경우 버전정보를 기록한다."}, {"t": "백신 설치 여부 및 정상작동 상태 확인", "m": "백신(안티바이러스) 설치 여부와 엔진·패턴 최신 업데이트 상태를 확인한다. 실시간 감시 동작 및 정상 구동 여부를 점검한다."}, {"t": "바이러스 및 악성코드 경고 이벤트 확인", "m": "백신·보안 로그에서 최근 바이러스·악성코드 탐지/경고 이벤트 이력을 확인한다. 미조치 위협 존재 여부와 격리·치료 상태를 점검한다."}, {"t": "AC 및 DC 입력 전원 측정", "m": "멀티미터(전압계)로 입력 AC 전압과 출력 DC 전압을 각각 측정한다. 정격 허용범위 내 여부를 확인하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "통신용 전원 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "이중화부 동작, 절체 시험", "m": "이중화 구성부의 절체(주↔예비) 시험을 실시한다. 장애 모의 시 자동 절체와 무순단 동작 여부를 확인한다."}, {"t": "UPS 바이패스 절체 동작시험", "m": "UPS 바이패스 절체를 시험하여 절체 동작과 부하 연속성을 확인한다. 절체 시 정전·경보 발생 여부를 점검한다."}, {"t": "입ㆍ출력 전압 및 충전전압, 전류측정, 배터리 전압 측정", "m": "멀티미터로 입·출력 전압, 충전전압·전류, 배터리 전압을 측정한다. 각 값이 정격 범위 내인지 확인하고 기록한다."}, {"t": "축전지 비중 측정(무보수형 제외)", "m": "비중계로 축전지 전해액 비중을 측정한다(무보수형 제외). 충전 상태·열화 여부를 판단하고 측정값을 기록한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}, {"name": "통신 접지 설비", "items": [{"t": "유지보수·관리 및 성능점검 대상 현황표 확인", "m": "유지보수·관리 및 성능점검 대상 현황표를 준공도면·설비목록 등 비치자료와 대조한다. 실제 설치 설비와 현황표 기재내용의 일치 여부를 육안·서류로 확인하고, 누락·변경 사항을 점검한다."}, {"t": "접지 상태 확인", "m": "접지선·접지단자의 결선 및 체결 상태와 부식 여부를 육안 확인한다. 접지 연결 누락·이완 여부를 점검한다."}, {"t": "접지저항 측정", "m": "접지저항계(어스테스터) 측정 리드를 접지단자에 연결하여 접지저항값을 측정한다. 설비 기준값 이하인지 확인하고, 측정값을 비고란에 기록한다."}]}];
+
+const KEY='ictInspect.v1';
+const $=(s,el=document)=>el.querySelector(s);
+const $$=(s,el=document)=>[...el.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let state=load();
+function blank(){
+  return {site:{name:'',addr:'',inspector:'',attendee:'',date:today()},
+    eq:DATA.map(e=>({inspector:'',attendee:'',loc:'',date:'',action:'',
+      items:e.items.map(()=>({r:null,note:''}))})) };
+}
+function today(){const d=new Date();return d.toISOString().slice(0,10);}
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(KEY));
+    if(s&&s.eq&&s.eq.length===DATA.length)return s;}catch(e){}
+  return blank();
+}
+let saveT;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{
+  try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
+},250);}
+
+/* ---- stats ---- */
+function eqStat(i){
+  const it=state.eq[i].items;let g=0,b=0;
+  it.forEach(x=>{if(x.r==='good')g++;else if(x.r==='bad')b++;});
+  return {g,b,done:g+b,total:it.length};
+}
+function totals(){
+  let g=0,b=0,t=0;
+  state.eq.forEach((e,i)=>{const s=eqStat(i);g+=s.g;b+=s.b;t+=s.total;});
+  return {g,b,t,non:t-g-b,done:g+b};
+}
+
+/* ---- dashboard ---- */
+function renderDash(){
+  const s=state.site;
+  $('#f_site').value=s.name;$('#f_addr').value=s.addr;
+  $('#f_inspector').value=s.inspector;$('#f_attendee').value=s.attendee;$('#f_date').value=s.date;
+  const T=totals();
+  $('#progText').textContent=`${T.done} / ${T.t} 항목`;
+  $('#cGood').textContent=T.g;$('#cBad').textContent=T.b;$('#cNon').textContent=T.non;
+  const pct=T.t?Math.round(T.done/T.t*100):0;
+  $('#ringPct').textContent=pct+'%';
+  const C=188.5;$('#ringFg').style.strokeDashoffset=C-C*pct/100;
+  $('#ringFg').setAttribute('stroke',T.b>0?'#ff9d9d':'#7ee0a8');
+  const badge=$('#tabBadge');
+  if(T.b>0){badge.textContent=T.b;badge.classList.remove('hide');}else badge.classList.add('hide');
+
+  const box=$('#eqList');box.innerHTML='';
+  DATA.forEach((e,i)=>{
+    const st=eqStat(i);
+    const pc=st.total?Math.round(st.done/st.total*100):0;
+    const cls=st.b>0?'hasbad':(st.done===st.total?'done':'');
+    const badge=st.b>0?`<span class="badge b">불량 ${st.b}</span>`
+      :(st.done===st.total?`<span class="badge d">완료</span>`:'');
+    const el=document.createElement('div');
+    el.className='eq '+cls;
+    el.innerHTML=`<div class="no">${i+1}</div>
+      <div class="body">
+        <div class="nm">${esc(e.name)}</div>
+        <div class="meta">${st.done}/${st.total} 점검 · ${pc}%</div>
+        <div class="bar"><i style="width:${pc}%"></i></div>
+      </div>
+      ${badge}
+      <div class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>`;
+    el.onclick=()=>openEq(i);
+    box.appendChild(el);
+  });
+}
+['f_site|name','f_addr|addr','f_inspector|inspector','f_attendee|attendee','f_date|date']
+.forEach(p=>{const[id,k]=p.split('|');
+  document.addEventListener('input',ev=>{if(ev.target.id===id){state.site[k]=ev.target.value;save();
+    if(k==='inspector'||k==='date') renderDash();}});
+});
+
+/* ---- inspection ---- */
+let curEq=0;
+function openEq(i){
+  curEq=i;const e=DATA[i],se=state.eq[i];
+  show('eq');
+  $('#barTitle').textContent=`${i+1}. ${e.name}`;
+  $('#barSub').textContent='성능점검표';
+  $('#e_inspector').value=se.inspector||state.site.inspector;
+  $('#e_attendee').value=se.attendee||state.site.attendee;
+  $('#e_loc').value=se.loc;
+  $('#e_date').value=se.date||state.site.date;
+  $('#e_action').value=se.action;
+  const box=$('#itemList');box.innerHTML='';
+  e.items.forEach((it,j)=>{
+    const r=se.items[j].r;
+    const cls=r==='good'?'good':(r==='bad'?'bad':'');
+    const el=document.createElement('div');
+    el.className='item '+cls;
+    el.innerHTML=`
+      <div class="top">
+        <div class="qno">항목 ${j+1}</div>
+        <div class="q">${esc(it.t)}</div>
+        <div class="how"><b>점검방식</b>${esc(it.m)}</div>
+      </div>
+      <div class="toggle">
+        <button class="tg ${r==='good'?'on-good':''}" data-r="good" data-j="${j}">
+          <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>양호</button>
+        <button class="tg ${r==='bad'?'on-bad':''}" data-r="bad" data-j="${j}">
+          <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>불량</button>
+      </div>
+      <div class="note-in"><input placeholder="비고 (측정값·특이사항)" data-note="${j}" value="${esc(se.items[j].note)}"></div>`;
+    box.appendChild(el);
+  });
+  updateEqProg();
+  window.scrollTo(0,0);
+}
+function updateEqProg(){
+  const st=eqStat(curEq);
+  $('#eqProgT').textContent=`${st.done} / ${st.total}`;
+  $('#eqProgBar').style.width=(st.total?st.done/st.total*100:0)+'%';
+}
+$('#itemList').addEventListener('click',ev=>{
+  const b=ev.target.closest('.tg');if(!b)return;
+  const j=+b.dataset.j,r=b.dataset.r,cur=state.eq[curEq].items[j].r;
+  state.eq[curEq].items[j].r=(cur===r)?null:r;save();
+  const nr=state.eq[curEq].items[j].r;
+  const item=b.closest('.item');
+  item.classList.toggle('good',nr==='good');
+  item.classList.toggle('bad',nr==='bad');
+  $$('.tg',item).forEach(t=>{t.classList.remove('on-good','on-bad');
+    if(t.dataset.r===nr)t.classList.add(nr==='good'?'on-good':'on-bad');});
+  updateEqProg();
+});
+$('#itemList').addEventListener('input',ev=>{
+  const n=ev.target.dataset.note;if(n===undefined)return;
+  state.eq[curEq].items[+n].note=ev.target.value;save();
+});
+[['e_inspector','inspector'],['e_attendee','attendee'],['e_loc','loc'],['e_date','date'],['e_action','action']]
+.forEach(([id,k])=>$('#'+id).addEventListener('input',e=>{state.eq[curEq][k]=e.target.value;save();}));
+$('#allGood').onclick=()=>{
+  state.eq[curEq].items.forEach(x=>{if(x.r===null)x.r='good';});save();openEq(curEq);toast('미점검 항목을 양호 처리했어요');
+};
+$('#doneEq').onclick=()=>{show('dash');renderDash();$('#barTitle').textContent='정보통신설비 성능점검';$('#barSub').textContent='현장 점검 · 자동 저장';};
+
+/* ---- report ---- */
+function renderReport(){
+  const s=state.site,T=totals();
+  $('#r_site').textContent=s.name?s.name+' 성능점검 결과':'성능점검 결과 보고';
+  $('#r_addr').textContent=s.addr||'';
+  $('#r_date').innerHTML='점검일자<br>'+(s.date||'-');
+  $('#r_inspector').textContent=s.inspector||'-';
+  $('#r_attendee').textContent=s.attendee||'-';
+  $('#r_total').textContent=T.t;$('#r_good').textContent=T.g;$('#r_bad').textContent=T.b;$('#r_non').textContent=T.non;
+  const body=$('#repBody');body.innerHTML='';
+  const bads=[];
+  state.eq.forEach((se,i)=>se.items.forEach((x,j)=>{if(x.r==='bad')bads.push({eq:DATA[i].name,it:DATA[i].items[j].t,note:x.note,action:se.action});}));
+  const h=document.createElement('div');h.className='rep-sec-h';
+  h.innerHTML=`불량 항목 <span class="cnt">${bads.length}</span>`;body.appendChild(h);
+  if(!bads.length){
+    const e=document.createElement('div');e.className='empty';
+    e.innerHTML=`<div class="ic">✓</div>불량으로 기록된 항목이 없습니다.`;body.appendChild(e);
+  }else{
+    bads.forEach(b=>{const c=document.createElement('div');c.className='bad-card';
+      c.innerHTML=`<div class="eqn">${esc(b.eq)}</div><div class="it">${esc(b.it)}</div>
+        <div class="nt">${b.note?esc(b.note):'<em>비고 없음</em>'}</div>`;body.appendChild(c);});
+  }
+  // 미점검 설비 요약
+  const nonDone=[];
+  state.eq.forEach((se,i)=>{const st=eqStat(i);if(st.done<st.total)nonDone.push(`${DATA[i].name} (${st.done}/${st.total})`);});
+  const h2=document.createElement('div');h2.className='rep-sec-h';
+  h2.innerHTML=`미완료 설비 <span class="cnt" style="background:var(--ink3)">${nonDone.length}</span>`;body.appendChild(h2);
+  if(!nonDone.length){const e=document.createElement('div');e.className='empty';e.innerHTML=`<div class="ic">✓</div>모든 설비 점검이 완료되었습니다.`;body.appendChild(e);}
+  else{const c=document.createElement('div');c.className='bad-card';c.style.borderLeftColor='var(--ink3)';
+    c.innerHTML=nonDone.map(x=>`<div class="nt" style="padding:2px 0">· ${esc(x)}</div>`).join('');body.appendChild(c);}
+}
+
+/* ---- nav ---- */
+function show(v){
+  ['dash','eq','report'].forEach(x=>$('#v-'+x).classList.toggle('hide',x!==v));
+  $('#backBtn').style.display=(v==='eq')?'flex':'none';
+  if(v==='dash'){$('#barTitle').textContent='정보통신설비 성능점검';$('#barSub').textContent='현장 점검 · 자동 저장';}
+  if(v==='report'){$('#barTitle').textContent='성능점검 보고서';$('#barSub').textContent='요약 · 불량 항목';}
+  $$('.tabbar button').forEach(b=>b.classList.toggle('on',
+    (v==='report'&&b.dataset.tab==='report')||((v==='dash'||v==='eq')&&b.dataset.tab==='dash')));
+}
+$$('.tabbar button').forEach(b=>b.onclick=()=>{
+  const t=b.dataset.tab;
+  if(t==='dash'){show('dash');renderDash();}
+  else{renderReport();show('report');}
+  window.scrollTo(0,0);
+});
+$('#backBtn').onclick=()=>{show('dash');renderDash();};
+
+/* ---- menu / export ---- */
+const sheet=$('#menuSheet');
+$('#menuBtn').onclick=()=>sheet.classList.add('on');
+sheet.onclick=e=>{if(e.target===sheet)sheet.classList.remove('on');};
+function closeSheet(){sheet.classList.remove('on');}
+$('#printBtn').onclick=()=>{renderReport();show('report');setTimeout(()=>window.print(),200);};
+$('#mPrint').onclick=()=>{closeSheet();renderReport();show('report');setTimeout(()=>window.print(),250);};
+
+function download(name,text,type){
+  const b=new Blob([text],{type});const u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),1000);
+}
+$('#mJson').onclick=()=>{closeSheet();
+  download(`점검백업_${state.site.date||today()}.json`,JSON.stringify(state,null,1),'application/json');
+  toast('백업 파일을 저장했어요');};
+$('#mCsv').onclick=()=>{closeSheet();
+  let rows=[['설비명','No','점검항목','점검결과','비고','설치위치','점검일자']];
+  const RT={good:'양호',bad:'불량',null:'미점검'};
+  state.eq.forEach((se,i)=>DATA[i].items.forEach((it,j)=>{
+    const x=se.items[j];
+    rows.push([DATA[i].name,j+1,it.t,x.r?RT[x.r]:'미점검',x.note||'',se.loc||'',se.date||state.site.date||'']);
+  }));
+  const csv='\ufeff'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  download(`점검결과_${state.site.date||today()}.csv`,csv,'text/csv');
+  toast('CSV로 내보냈어요');};
+$('#mImport').onclick=()=>{closeSheet();$('#importFile').click();};
+$('#importFile').onchange=e=>{const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{try{const s=JSON.parse(rd.result);
+    if(s&&s.eq&&s.eq.length===DATA.length){state=s;save();renderDash();show('dash');toast('백업을 불러왔어요');}
+    else toast('형식이 맞지 않는 파일이에요');}catch(err){toast('불러오기에 실패했어요');}};
+  rd.readAsText(f);e.target.value='';};
+$('#mReset').onclick=()=>{closeSheet();
+  if(confirm('모든 점검 기록을 삭제하고 처음 상태로 되돌릴까요?')){
+    state=blank();save();renderDash();show('dash');toast('초기화했어요');}};
+
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1900);}
+
+/* init */
+renderDash();
+</script>
+</body>
+</html>
